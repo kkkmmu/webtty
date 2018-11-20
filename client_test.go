@@ -1,4 +1,4 @@
-package main
+package webtty
 
 import (
 	"errors"
@@ -14,7 +14,7 @@ import (
 )
 
 func TestClientDataChannelOnMessage(t *testing.T) {
-	cs := clientSession{}
+	cs := ClientSession{}
 	cs.errChan = make(chan error, 1)
 	cs.oldTerminalState = &terminal.State{}
 	onMessage := cs.dataChannelOnMessage()
@@ -45,7 +45,7 @@ func TestClientDataChannelOnMessage(t *testing.T) {
 }
 
 func TestSendTermSize(t *testing.T) {
-	hs := hostSession{ptmxReady: true}
+	hs := HostSession{ptmxReady: true}
 	c := exec.Command("sh")
 	var err error
 	hs.ptmx, err = pty.Start(c)

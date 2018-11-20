@@ -1,4 +1,4 @@
-package main
+package webtty
 
 import (
 	"log"
@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-type session struct {
+type Session struct {
 	// mutex?
 	oldTerminalState *terminal.State
 	stunServers      []string
@@ -23,7 +23,7 @@ type session struct {
 	dc               *webrtc.RTCDataChannel
 }
 
-func (s *session) init() (err error) {
+func (s *Session) init() (err error) {
 	s.errChan = make(chan error, 1)
 	s.isTerminal = terminal.IsTerminal(int(os.Stdin.Fd()))
 	if err = s.createPeerConnection(); err != nil {
@@ -33,7 +33,7 @@ func (s *session) init() (err error) {
 	return
 }
 
-func (s *session) cleanup() {
+func (s *Session) cleanup() {
 	if s.dc != nil {
 		// TODO: check dc state?
 		if err := s.dc.Send(datachannel.PayloadString{Data: []byte("quit")}); err != nil {
@@ -48,20 +48,20 @@ func (s *session) cleanup() {
 
 }
 
-func (s *session) restoreTerminalState() error {
+func (s *Session) restoreTerminalState() error {
 	if s.oldTerminalState != nil {
 		return terminal.Restore(int(os.Stdin.Fd()), s.oldTerminalState)
 	}
 	return nil
 }
 
-func (s *session) makeRawTerminal() error {
+func (s *Session) makeRawTerminal() error {
 	var err error
 	s.oldTerminalState, err = terminal.MakeRaw(int(os.Stdin.Fd()))
 	return err
 }
 
-func (s *session) createPeerConnection() (err error) {
+func (s *Session) createPeerConnection() (err error) {
 	config := webrtc.RTCConfiguration{
 		IceServers: []webrtc.RTCIceServer{
 			{

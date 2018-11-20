@@ -1,4 +1,4 @@
-package main
+package webtty
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestHosttDataChannelOnMessage(t *testing.T) {
-	hs := hostSession{ptmxReady: true}
+	hs := HostSession{ptmxReady: true}
 	hs.errChan = make(chan error, 1)
 	onMessage := hs.dataChannelOnMessage()
 	quitPayload := datachannel.PayloadString{Data: []byte("quit")}
@@ -40,8 +40,8 @@ func TestHosttDataChannelOnMessage(t *testing.T) {
 
 }
 
-func makeShPty(t *testing.T) (func(p datachannel.Payload), hostSession) {
-	hs := hostSession{ptmxReady: true}
+func makeShPty(t *testing.T) (func(p datachannel.Payload), HostSession) {
+	hs := HostSession{ptmxReady: true}
 	hs.errChan = make(chan error, 1)
 	onMessage := hs.dataChannelOnMessage()
 	c := exec.Command("sh")

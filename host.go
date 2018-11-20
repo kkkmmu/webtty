@@ -1,4 +1,4 @@
-package main
+package webtty
 
 import (
 	"encoding/json"
@@ -18,17 +18,26 @@ import (
 	"github.com/pions/webrtc/pkg/datachannel"
 )
 
-type hostSession struct {
-	session
+type HostSession struct {
+	Session
 	cmd            []string
 	nonInteractive bool
 	oneWay         bool
 	ptmx           *os.File
 	ptmxReady      bool
 	tmux           bool
+	Offer          string
 }
 
-func (hs *hostSession) dataChannelOnOpen() func() {
+func NewHost(cmd []string) (*HostSession, error) {
+	return &HostSession{
+		//	oneWay:         true,
+		//	nonInteractive: true,
+		cmd: cmd,
+	}, nil
+}
+
+func (hs *HostSession) dataChannelOnOpen() func() {
 	return func() {
 		colorstring.Println("[bold]Terminal session started:")
 
@@ -92,7 +101,7 @@ func (hs *hostSession) dataChannelOnOpen() func() {
 	}
 }
 
-func (hs *hostSession) dataChannelOnMessage() func(payload datachannel.Payload) {
+func (hs *HostSession) dataChannelOnMessage() func(payload datachannel.Payload) {
 	return func(payload datachannel.Payload) {
 
 		// OnMessage can fire before onOpen
@@ -168,7 +177,7 @@ func (hs *hostSession) dataChannelOnMessage() func(payload datachannel.Payload) 
 	}
 }
 
-func (hs *hostSession) onDataChannel() func(dc *webrtc.RTCDataChannel) {
+func (hs *HostSession) onDataChannel() func(dc *webrtc.RTCDataChannel) {
 	return func(dc *webrtc.RTCDataChannel) {
 		hs.dc = dc
 		dc.OnOpen(hs.dataChannelOnOpen())
@@ -176,14 +185,14 @@ func (hs *hostSession) onDataChannel() func(dc *webrtc.RTCDataChannel) {
 	}
 }
 
-func (hs *hostSession) mustReadStdin() (string, error) {
+func (hs *HostSession) mustReadStdin() (string, error) {
 	var input string
 	fmt.Scanln(&input)
 	sd, err := sd.Decode(input)
 	return sd.Sdp, err
 }
 
-func (hs *hostSession) createOffer() (err error) {
+func (hs *HostSession) createOffer() (err error) {
 	hs.pc.OnDataChannel(hs.onDataChannel())
 
 	// Create an offer to send to the browser
@@ -203,7 +212,7 @@ func (hs *hostSession) createOffer() (err error) {
 	return
 }
 
-func (hs *hostSession) run() (err error) {
+func (hs *HostSession) Run() (err error) {
 	if err = hs.init(); err != nil {
 		return
 	}
@@ -220,6 +229,7 @@ func (hs *hostSession) run() (err error) {
 
 	// Output the offer in base64 so we can paste it in browser
 	colorstring.Printf("[bold]Connection ready. Here is your connection data:\n\n")
+	hs.Offer = sd.Encode(hs.offer)
 	fmt.Printf("%s\n\n", sd.Encode(hs.offer))
 	colorstring.Printf(`[bold]Paste it in the terminal after the webtty command` +
 		"\n[bold]Or in a browser: [reset]https://maxmcd.github.io/webtty/\n\n")
@@ -253,7 +263,7 @@ func (hs *hostSession) run() (err error) {
 	return hs.setHostRemoteDescriptionAndWait()
 }
 
-func (hs *hostSession) setHostRemoteDescriptionAndWait() (err error) {
+func (hs *HostSession) setHostRemoteDescriptionAndWait() (err error) {
 	// Set the remote SessionDescription
 	answer := webrtc.RTCSessionDescription{
 		Type: webrtc.RTCSdpTypeAnswer,

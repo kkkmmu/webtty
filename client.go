@@ -1,4 +1,4 @@
-package main
+package webtty
 
 import (
 	"bufio"
@@ -16,10 +16,16 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-type clientSession struct {
-	session
+type ClientSession struct {
+	Session
 	dc          *webrtc.RTCDataChannel
 	offerString string
+}
+
+func NewClient(offerString string) (*ClientSession, error) {
+	return &ClientSession{
+		offerString: offerString,
+	}, nil
 }
 
 func sendTermSize(term *os.File, dcSend func(p datachannel.Payload) error) error {
@@ -33,7 +39,7 @@ func sendTermSize(term *os.File, dcSend func(p datachannel.Payload) error) error
 	return dcSend(datachannel.PayloadString{Data: []byte(size)})
 }
 
-func (cs *clientSession) dataChannelOnOpen() func() {
+func (cs *ClientSession) dataChannelOnOpen() func() {
 	return func() {
 		log.Printf("Data channel '%s'-'%d'='%d' open.\n", cs.dc.Label, cs.dc.ID, *cs.dc.MaxPacketLifeTime)
 		colorstring.Println("[bold]Terminal session started:")
@@ -71,7 +77,7 @@ func (cs *clientSession) dataChannelOnOpen() func() {
 	}
 }
 
-func (cs *clientSession) dataChannelOnMessage() func(payload datachannel.Payload) {
+func (cs *ClientSession) dataChannelOnMessage() func(payload datachannel.Payload) {
 	return func(payload datachannel.Payload) {
 		switch p := payload.(type) {
 		case *datachannel.PayloadString:
@@ -95,7 +101,7 @@ func (cs *clientSession) dataChannelOnMessage() func(payload datachannel.Payload
 	}
 }
 
-func (cs *clientSession) run() (err error) {
+func (cs *ClientSession) Run() (err error) {
 	if err = cs.init(); err != nil {
 		return
 	}
